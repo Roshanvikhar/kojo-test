@@ -1,31 +1,43 @@
-name: Deploy to Minikube
+name: Deploy to Local Minikube
 
 on:
   push:
     branches:
-      - main
+      - main  # Triggers on push to main branch
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Your local Minikube host
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Kubernetes CLI
+      - name: Set up kubectl (if needed)
         uses: azure/setup-kubectl@v3
         with:
           version: 'latest'
 
-      - name: Install Minikube
+      - name: Verify Minikube is running
         run: |
-          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-          sudo install minikube-linux-amd64 /usr/local/bin/minikube
-          minikube start --driver=docker
+          minikube status
+          kubectl cluster-info
 
-      - name: Apply manifests
+      - name: Create namespace if not exists
         run: |
-          kubectl apply -f echo-deployment.yaml
-          kubectl apply -f echo-service.yaml
-          kubectl apply -f deny-all.yaml || true
+          kubectl get ns fynbos || kubectl create ns fynbos
+
+      - name: Apply ConfigMap
+        run: kubectl apply -f kojo-test/Docker/echo-configmap.yaml
+
+      - name: Apply Deployment
+        run: kubectl apply -f kojo-test/Docker/echo-deployment.yaml
+
+      - name: Apply Service
+        run: kubectl apply -f kojo-test/Docker/echo-service.yaml
+
+      - name: Apply Allow Port-Forward NetworkPolicy
+        run: kubectl apply -f kojo-test/Docker/allow-portforward.yaml || true
+
+      - name: Apply Deny-All NetworkPolicy
+        run: kubectl apply -f kojo-test/Docker/deny-all-policy.yaml || true
