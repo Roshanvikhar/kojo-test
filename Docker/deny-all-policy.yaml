@@ -1,4 +1,16 @@
-# deny-all-policy.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-service
+  namespace: fynbs
+spec:
+  selector:
+    app: echo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

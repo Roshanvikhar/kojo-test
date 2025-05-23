@@ -1,27 +1,38 @@
-name: Deploy to Local Minikube
+name: Deploy to EKS on release/* branch
 
 on:
   push:
     branches:
-      - main  # Triggers on push to main branch
+      - 'release/*'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up kubectl (if needed)
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::<AWS_ACCOUNT_ID>:role/<GITHUB_ACTIONS_EKS_ROLE>
+          aws-region: <AWS_REGION> # e.g., us-west-2
+
+      - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
           version: 'latest'
 
-      - name: Verify Minikube is running
+      - name: Set up kubeconfig for EKS
         run: |
-          minikube status
-          kubectl cluster-info
+          aws eks update-kubeconfig \
+            --name <EKS_CLUSTER_NAME> \
+            --region <AWS_REGION>
 
       - name: Create namespace if not exists
         run: |
